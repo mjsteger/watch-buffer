@@ -35,6 +35,9 @@
 (defun add-to-watcher (file command)
   (puthash file command *watched-buffers))
 
+(defun remove-from-watcher (file)
+  (remhash file *watched-buffers))
+
 (defun should-reload ()
   (setq my-shell-command (gethash (buffer-file-name) *watched-buffers))
   (if (not (equal my-shell-command nil))
@@ -44,6 +47,11 @@
   (interactive)
   (add-to-watcher (buffer-file-name) (read-from-minibuffer "What command do you want: " ))
   "Function to add a buffer to the *watched-buffers hash, with the command to be run")
+
+(defun unwatch-buffer ()
+  (interactive)
+  (remove-from-watcher (buffer-file-name))
+  "Function to remove a buffer from the *watched-buffers hash.")
 
 (defun add-after-save-hook ()
   (add-hook 'after-save-hook 'should-reload)
