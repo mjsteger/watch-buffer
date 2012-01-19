@@ -24,37 +24,63 @@
 ;; M-x watch-buffer, enter the shell script to run, and every time you save the file it
 ;; will run the shell script asynchronously in a seperate buffer
 
+(defcustom watch-buffer-types
+  '(("watch-buffer" . (watch-buffer watch-buffer-async-shell-command))
+    ("watch-buffer-silently" . (watch-buffer-silently call-process-shell-command))
+    ("watch-buffer-elisp" . (watch-buffer-elisp watch-buffer-apply-elisp))
+    )"Assoc list of the tag, interactive command, and command to use to evaluate")
 
-(defgroup watch-buffer nil
-  "Watching buffers, and running commands"
-  :group 'watch)
+(defun general-watch (type &optional command)
+  (if (equal command nil)
+      (add-to-watcher (read-from-minibuffer "What command do you want: " ) type)
+    (add-to-watcher command type)))
 
-(defvar *watched-buffers #s(hash-table size 100 test equal data())
-  "Hash that holds the buffers to watch, and the commands to run")
+(defmacro watch-buffer-command (tag name)
+  `(defun ,name (&optional command)
+     (interactive)
+     (general-watch ,tag command)))
 
-(defun add-to-watcher (file command)
-  (puthash file command *watched-buffers))
+(defun build-interactive-functions ()
+  (mapcar (lambda (arg)
+	    (eval `(watch-buffer-command ,(car arg) ,(cadr arg)))) watch-buffer-types))
 
-(defun remove-from-watcher (file)
-  (remhash file *watched-buffers))
+(defun watch-buffer-async-shell-command (this-command)
+  "Async-shell-command with the name of the buffer set to *Watch-Process"
+  (async-shell-command this-command (concat "*Watch-Process-" this-command "*")))
 
-(defun should-reload ()
-  (setq my-shell-command (gethash (buffer-file-name) *watched-buffers))
-  (if (not (equal my-shell-command nil))
-      (async-shell-command my-shell-command "*Watch-Process*")))
+(defun watch-buffer-apply-elisp (elisp-function)
+  (let ((splitted-string (split-string elisp-function)))
+    (apply (intern (car splitted-string)) (cdr splitted-string ))))
 
-(defun watch-buffer ()
-  (interactive)
-  (add-to-watcher (buffer-file-name) (read-from-minibuffer "What command do you want: " ))
-  "Function to add a buffer to the *watched-buffers hash, with the command to be run")
+(defvar watch-buffer-commands-alist '()
+  "Alist that holds the commands to run for this buffer. The format of
+  the data will be an alist of lists, which can have as the car any of
+  the variables currently defined in watch-buffer-types")
+(make-variable-buffer-local 'watch-buffer-commands-alist)
+
+(defun add-to-watcher (command tag)
+  (if (not (assoc tag watch-buffer-commands-alist))
+      (setq watch-buffer-commands-alist (cons (list tag) watch-buffer-commands-alist)))
+  (let ((this-tag-list (assoc tag watch-buffer-commands-alist)))
+    (setcdr this-tag-list (cons (list command) (cdr this-tag-list)))))
+
+(defun watch-buffer-reload-commands ()
+  (when watch-buffer-commands-alist
+    (mapc 'apply-watch-buffer-command watch-buffer-commands-alist)))
+
+(defun apply-watch-buffer-command (file-alist)
+  (let ((command-to-apply (caddr (assoc (car file-alist) watch-buffer-types))))
+    (print (cdr file-alist))
+    (mapc (lambda (x) (eval `(,command-to-apply (car x)))) (cdr file-alist))))
 
 (defun unwatch-buffer ()
   (interactive)
-  (remove-from-watcher (buffer-file-name))
-  "Function to remove a buffer from the *watched-buffers hash.")
+  (setq watch-buffer-commands-alist '())
+  "Function to remove a buffer from the watch-buffer-commands-alist.")
 
 (defun add-after-save-hook ()
-  (add-hook 'after-save-hook 'should-reload)
+  (add-hook 'after-save-hook 'watch-buffer-reload-commands)
   "Add the watch-buffers check to the after-save-hook")
 
 (add-after-save-hook)
+(build-interactive-functions)
