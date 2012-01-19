@@ -84,3 +84,5 @@
 
 (add-after-save-hook)
 (build-interactive-functions)
+
+(provide 'watch-buffer)
