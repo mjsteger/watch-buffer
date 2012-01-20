@@ -28,6 +28,7 @@
   '(("watch-buffer" . (watch-buffer watch-buffer-async-shell-command))
     ("watch-buffer-silently" . (watch-buffer-silently call-process-shell-command))
     ("watch-buffer-elisp" . (watch-buffer-elisp watch-buffer-apply-elisp))
+    ("watch-buffer-compile" . (watch-buffer-compile run-compile))
     )"Assoc list of the tag, interactive command, and command to use to evaluate")
 
 (defun general-watch (type &optional command)
