@@ -24,11 +24,14 @@
 ;; M-x watch-buffer, enter the shell script to run, and every time you save the file it
 ;; will run the shell script asynchronously in a seperate buffer
 
+(require 'simple-compile)
+
 (defcustom watch-buffer-types
   '(("watch-buffer" . (watch-buffer watch-buffer-async-shell-command))
     ("watch-buffer-silently" . (watch-buffer-silently call-process-shell-command))
     ("watch-buffer-elisp" . (watch-buffer-elisp watch-buffer-apply-elisp))
     ("watch-buffer-compile" . (watch-buffer-compile run-compile))
+    ("watch-buffer-additive" . (watch-buffer-additive run-compile-additive))
     )"Assoc list of the tag, interactive command, and command to use to evaluate")
 
 (defun general-watch (type &optional command)
