@@ -13,8 +13,6 @@ watch-buffer-elisp, which will run arbitrary elisp when the file is saved
 
 watch-buffer-compile, which seeks to provide a do-what-I-mean compilation for files. For example, invoking watch-buffer-compile on a python file will run that python file with whatever argv is supplied every time the file is saved
 
-watch-buffer-additive, which will look for a file with the suffix "test" in the same directory as the current file, and then willconcatenate the current file and that file into a temporary file, running that file as with watch-buffer-compile
-
 New commands can be easily added in watch-buffer.el: Simply add a cons cell into watch-buffer-types with the format
 (tag . (name-to-call-from-M-x command-to-run-on-save)). For example, watch-buffer is defined as:
 ("watch-buffer" . (watch-buffer watch-buffer-async-shell-command))

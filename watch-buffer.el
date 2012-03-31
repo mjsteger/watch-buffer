@@ -4,7 +4,8 @@
 
 ;; Author: Michael Steger <mjsteger1@gmail.com>
 ;; Keywords: automation, convenience
-;; Version: 1.0.0
+;; URL: https://github.com/mjsteger/watch-buffer
+;; Version: 1.0.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -29,15 +30,22 @@
 
 ;;; Code:
 
-(require 'simple-compile)
-
 (defcustom watch-buffer-types
   '(("watch-buffer" . (watch-buffer watch-buffer-async-shell-command))
     ("watch-buffer-silently" . (watch-buffer-silently call-process-shell-command))
     ("watch-buffer-elisp" . (watch-buffer-elisp watch-buffer-apply-elisp))
     ("watch-buffer-compile" . (watch-buffer-compile run-compile))
-    ("watch-buffer-additive" . (watch-buffer-additive run-compile-additive))
     )"Assoc list of the tag, interactive command, and command to use to evaluate")
+
+(defvar this-file-argv nil
+  "Variable that holds the argv that you wish to run the current file with")
+(make-variable-buffer-local 'this-file-argv)
+
+(defvar watch-buffer-commands-alist '()
+  "Alist that holds the commands to run for this buffer. The format of
+  the data will be an alist of lists, which can have as the car any of
+  the variables currently defined in watch-buffer-types")
+(make-variable-buffer-local 'watch-buffer-commands-alist)
 
 (defun general-watch (type &optional command)
   (if (equal command nil)
@@ -61,11 +69,6 @@
   (let ((splitted-string (split-string elisp-function)))
     (apply (intern (car splitted-string)) (cdr splitted-string ))))
 
-(defvar watch-buffer-commands-alist '()
-  "Alist that holds the commands to run for this buffer. The format of
-  the data will be an alist of lists, which can have as the car any of
-  the variables currently defined in watch-buffer-types")
-(make-variable-buffer-local 'watch-buffer-commands-alist)
 
 (defun add-to-watcher (command tag)
   (if (not (assoc tag watch-buffer-commands-alist))
@@ -94,4 +97,27 @@
 (add-after-save-hook)
 (build-interactive-functions)
 
+(defcustom simple-compile-modes-alist
+  '((python-mode . ("python " kill-compilation))
+    (ruby-mode . ("ruby -w "  kill-compilation))
+    (perl-mode . ("perl " kill-compilation))
+    (shell-script-mode . ("./" kill-compilation))
+    )
+  "Alist of modes mapping to the command to run")
+
+(defun run-compile (&optional argv)
+  (interactive)
+  (when argv
+      (setq this-file-argv argv))
+  (when (equal this-file-argv nil)
+    (simple-compile-change-argv))
+  (let ((command-to-run (cadr (assoc major-mode simple-compile-modes-alist))))
+    (async-shell-command (concat command-to-run (buffer-file-name) " " this-file-argv) "*Simple-Compile*")))
+
+(defun simple-compile-change-argv ()
+  (interactive)
+  (setq this-file-argv  (read-from-minibuffer "What argv do you want: ")))
+
 (provide 'watch-buffer)
+
+;;; watch-buffer.el ends here
